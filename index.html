@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Pushup Bank</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="description" content="Track daily push-ups, bank your surplus, and build a streak.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pushup Bank">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ONBOARDING -->
+  <div id="onboarding" class="screen onboarding hidden">
+    <div class="onboard-card">
+      <div class="brand">
+        <div class="brand-mark">💪</div>
+        <h1>Pushup Bank</h1>
+        <p class="tagline">Log reps. Bank the surplus. Never miss a streak.</p>
+      </div>
+
+      <div id="ob-step-welcome" class="ob-step">
+        <h2>Welcome</h2>
+        <p>Set up your own tracker — separate from any friends using this same app.</p>
+        <button class="btn primary" data-next="ob-step-name">Get started</button>
+        <button class="btn ghost" id="ob-switch-existing">I already have a profile</button>
+      </div>
+
+      <div id="ob-step-name" class="ob-step hidden">
+        <h2>Who's training?</h2>
+        <label class="field">
+          <span>Your name</span>
+          <input type="text" id="ob-name" maxlength="24" placeholder="e.g. Sam" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>4-digit PIN <small>(lightweight lock, not secure storage)</small></span>
+          <input type="password" id="ob-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="1234" autocomplete="off">
+        </label>
+        <button class="btn primary" id="ob-name-next">Continue</button>
+      </div>
+
+      <div id="ob-step-baseline" class="ob-step hidden">
+        <h2>Let's find your baseline</h2>
+        <p>This sets a target that's ambitious but doable on day one.</p>
+        <div class="seg" id="ob-method-seg">
+          <button class="seg-btn active" data-method="oneSet">Max in one set</button>
+          <button class="seg-btn" data-method="sixtySec">Reps in 60 seconds</button>
+        </div>
+        <label class="field">
+          <span id="ob-value-label">How many push-ups can you do in one set, to failure?</span>
+          <input type="number" id="ob-value" inputmode="numeric" min="1" max="300" placeholder="e.g. 15">
+        </label>
+        <button class="btn primary" id="ob-baseline-next">Calculate my target</button>
+      </div>
+
+      <div id="ob-step-confirm" class="ob-step hidden">
+        <h2>Your starting plan</h2>
+        <div class="plan-preview" id="ob-plan-preview"></div>
+        <p class="hint">Targets rise gradually each week. Sundays are automatic rest days. Extra reps get banked for later.</p>
+        <button class="btn primary" id="ob-confirm-start">Start training</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE SWITCHER -->
+  <div id="profile-switcher" class="screen modal hidden">
+    <div class="modal-card">
+      <h2>Switch profile</h2>
+      <div id="profile-list" class="profile-list"></div>
+      <button class="btn ghost" id="add-profile-btn">+ Add another profile</button>
+      <button class="btn ghost" id="close-switcher-btn">Close</button>
+    </div>
+  </div>
+
+  <!-- PIN UNLOCK -->
+  <div id="pin-unlock" class="screen modal hidden">
+    <div class="modal-card">
+      <h2 id="pin-unlock-name">Enter PIN</h2>
+      <input type="password" id="pin-unlock-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off">
+      <div id="pin-error" class="error-text hidden">Incorrect PIN</div>
+      <button class="btn primary" id="pin-unlock-btn">Unlock</button>
+      <button class="btn ghost" id="pin-cancel-btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="main" class="hidden">
+
+    <header class="topbar">
+      <button id="open-switcher" class="icon-btn" aria-label="Switch profile">☰</button>
+      <div class="topbar-title">
+        <span id="topbar-name">—</span>
+        <span class="streak-chip" id="streak-chip">🔥 0</span>
+      </div>
+      <div class="topbar-spacer"></div>
+    </header>
+
+    <main id="views">
+
+      <!-- HOME -->
+      <section id="view-home" class="view">
+        <div class="ring-wrap">
+          <svg id="ring-svg" viewBox="0 0 220 220" class="ring">
+            <circle class="ring-bg" cx="110" cy="110" r="96"></circle>
+            <circle class="ring-fg" id="ring-fg" cx="110" cy="110" r="96"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-number" id="ring-logged">0</div>
+            <div class="ring-of" id="ring-target">of 0</div>
+            <div class="ring-label" id="ring-label">today</div>
+          </div>
+        </div>
+
+        <div class="bank-banner" id="bank-banner">
+          <span class="bank-amount" id="bank-amount">0</span> banked
+          <span id="bank-covers"></span>
+        </div>
+
+        <div id="target-breakdown" class="target-breakdown"></div>
+
+        <div class="quick-add">
+          <button class="qa-btn" data-add="5">+5</button>
+          <button class="qa-btn" data-add="10">+10</button>
+          <button class="qa-btn" data-add="15">+15</button>
+          <button class="qa-btn" data-add="20">+20</button>
+        </div>
+        <div class="custom-add">
+          <input type="number" id="custom-reps" inputmode="numeric" min="1" max="500" placeholder="Custom reps">
+          <button class="btn primary" id="custom-add-btn">Log</button>
+        </div>
+
+        <div class="sets-log">
+          <h3>Today's sets</h3>
+          <div id="sets-list" class="sets-list"></div>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="view-history" class="view hidden">
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="stat-value" id="stat-lifetime">0</div><div class="stat-label">Lifetime reps</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-current-streak">0</div><div class="stat-label">Current streak</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-longest-streak">0</div><div class="stat-label">Longest streak</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-days-active">0</div><div class="stat-label">Days active</div></div>
+        </div>
+
+        <h3>Last 12 weeks</h3>
+        <div class="heatmap-wrap">
+          <div id="heatmap" class="heatmap"></div>
+        </div>
+        <div id="day-detail" class="day-detail hidden"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="view hidden">
+        <div class="settings-group">
+          <h3>Profile</h3>
+          <div class="row"><span>Name</span><span id="set-name">—</span></div>
+          <div class="row"><span>Member since</span><span id="set-since">—</span></div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Target &amp; ramp</h3>
+          <div class="row"><span>Current daily target</span><span id="set-target">—</span></div>
+          <div class="row"><span>Weekly ramp rate</span><span id="set-ramp">—</span></div>
+          <div class="row"><span>Rest day</span>
+            <select id="set-restday">
+              <option value="0">Sunday</option>
+              <option value="1">Monday</option>
+              <option value="2">Tuesday</option>
+              <option value="3">Wednesday</option>
+              <option value="4">Thursday</option>
+              <option value="5">Friday</option>
+              <option value="6">Saturday</option>
+            </select>
+          </div>
+          <button class="btn ghost" id="redo-baseline-btn">Redo baseline test</button>
+        </div>
+
+        <div class="settings-group">
+          <h3>Data</h3>
+          <button class="btn ghost" id="export-btn">Export my data (JSON)</button>
+          <label class="btn ghost file-btn">Import data (JSON)
+            <input type="file" id="import-input" accept="application/json" hidden>
+          </label>
+          <button class="btn danger" id="delete-profile-btn">Delete this profile</button>
+        </div>
+
+        <div class="settings-group note">
+          <h3>About this app</h3>
+          <p>Pushup Bank stores everything locally in this browser. Friends running their own copy get a completely separate profile — nothing is shared or synced between devices.</p>
+          <p>A future version could add a lightweight backend so profiles sync across devices and an opt-in leaderboard can compare streaks between friends.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab-btn active" data-view="view-home"><span class="tab-icon">🏠</span><span>Today</span></button>
+      <button class="tab-btn" data-view="view-history"><span class="tab-icon">📈</span><span>History</span></button>
+      <button class="tab-btn" data-view="view-settings"><span class="tab-icon">⚙️</span><span>Settings</span></button>
+    </nav>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
